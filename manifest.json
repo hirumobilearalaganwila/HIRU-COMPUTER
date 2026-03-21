@@ -1,0 +1,35 @@
+{
+  "name": "HIRU MOBILE & COMPUTERS",
+  "short_name": "HIRU COMP",
+  "description": "Computer & Mobile Repair Management System - Aralaganwila",
+  "start_url": "/HIRU-COMPUTER/",
+  "scope": "/HIRU-COMPUTER/",
+  "display": "standalone",
+  "background_color": "#1e1b4b",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "lang": "en",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ]
+}
