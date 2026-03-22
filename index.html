@@ -4340,11 +4340,13 @@ let printouts=[];
 let poPriceA4=3, poPriceA3=5;
 
 function loadPrintouts(){
+ // Load from localStorage first (instant load)
  try{
   const p=localStorage.getItem('hm_printouts'); if(p) printouts=JSON.parse(p);
   const pa=localStorage.getItem('hm_po_priceA4'); if(pa) poPriceA4=parseFloat(pa);
   const pb=localStorage.getItem('hm_po_priceA3'); if(pb) poPriceA3=parseFloat(pb);
  }catch(e){}
+ // Firebase real-time listener will override with latest cloud data automatically
 }
 function savePrintouts(){
  try{localStorage.setItem('hm_printouts',JSON.stringify(printouts));}catch(e){}
@@ -4370,6 +4372,10 @@ function savePrices(){
   localStorage.setItem('hm_po_priceA4',poPriceA4);
   localStorage.setItem('hm_po_priceA3',poPriceA3);
  }catch(e){}
+ // Sync prices to Firebase so vendor app picks them up
+ if(window._db){
+  window._db.collection('shop').doc('data').set({poPriceA4,poPriceA3},{merge:true}).catch(()=>{});
+ }
 }
 function getRevenue(a4,a3){return (a4*poPriceA4)+(a3*poPriceA3);}
 
@@ -4706,7 +4712,18 @@ function initFirebase(){
    if(ok) setTimeout(()=>{syncBadge.style.opacity='0.4';},3000);
   }
 
-  // Real-time listener
+  // Real-time listener — Printouts
+  db.collection('shop').doc('printouts').onSnapshot(snap=>{
+   if(snap.exists){
+    const incoming=snap.data().printouts||[];
+    // Always update — vendor app data always wins
+    printouts=incoming;
+    try{localStorage.setItem('hm_printouts',JSON.stringify(printouts));}catch(e){}
+    renderPrintouts();
+   }
+  },err=>{console.warn('Printouts sync error:',err);});
+
+  // Real-time listener — Main data
   db.collection('shop').doc('data').onSnapshot(snap=>{
    if(snap.exists){
     const d=snap.data();
