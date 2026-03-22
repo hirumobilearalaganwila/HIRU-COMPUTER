@@ -17,9 +17,9 @@
 <!-- PWA Manifest (inline) -->
 <link rel="manifest" href="manifest.json"/>
 
-<!-- App Icons (emoji fallback) -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e1b4b'/><text y='.9em' font-size='70' x='10'>💻</text></svg>"/>
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e1b4b'/><text y='.9em' font-size='70' x='10'>💻</text></svg>"/>
+<!-- App Icons -->
+<link rel="icon" href="icon-192.png" type="image/png"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
 <meta name="app-version" content="1.5.0"/>
 <!-- Google API -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1163,6 +1163,7 @@ textarea{resize:vertical;min-height:60px;}
          <th>Date</th>
          <th>Day</th>
          <th style="color:#7c3aed;">Invoice Sales</th>
+         <th style="color:#5b21b6;">💻 Computer</th>
          <th style="color:#065f46;">Repair Revenue</th>
          <th style="color:#dc2626;">Credits</th>
          <th style="color:#7c3aed;">Grand Total</th>
@@ -3800,7 +3801,7 @@ function runAnalyze(){
  }
 
  // ===== DAY BY DAY ANALYSIS =====
- renderDayByDay(from, toD, filtInv, filtRep, filtCr);
+ renderDayByDay(from, toD, filtInv, filtRep, filtCr, filtComp);
 }
 
 let _dbdView='chart';
@@ -3814,7 +3815,8 @@ function dbdSetView(v){
  });
 }
 
-function renderDayByDay(from, toD, filtInv, filtRep, filtCr){
+function renderDayByDay(from, toD, filtInv, filtRep, filtCr, filtComp){
+ filtComp=filtComp||[];
  const days=[];
  const cur=new Date(from);
  while(cur<=toD){
@@ -3844,17 +3846,21 @@ function renderDayByDay(from, toD, filtInv, filtRep, filtCr){
   const inv=filtInv.filter(i=>i.date===ds);
   const rep=filtRep.filter(r=>r.date===ds);
   const cr=filtCr.filter(c=>c.date===ds);
+  const comp=filtComp.filter(j=>j.date===ds);
   const invTotal=inv.reduce((s,i)=>s+i.total,0);
   const invPaid=inv.filter(i=>i.status==='paid').reduce((s,i)=>s+i.total,0);
   const repDone=rep.filter(r=>r.status==='done');
   const repCash=repDone.reduce((s,r)=>s+r.cost,0);
+  const compDone=comp.filter(j=>j.status==='done');
+  const compCash=compDone.reduce((s,j)=>s+j.cost,0);
   const crAmt=cr.filter(c=>c.status==='pending').reduce((s,c)=>s+c.amount,0);
-  const grand=invPaid+repCash;
-  return{d,ds,dayName:dayNames[d.getDay()],inv,rep,cr,invTotal,invPaid,repCash,crAmt,grand,hasData:(inv.length+rep.length+cr.length)>0};
+  const grand=invPaid+repCash+compCash;
+  return{d,ds,dayName:dayNames[d.getDay()],inv,rep,cr,comp,invTotal,invPaid,repCash,compCash,crAmt,grand,hasData:(inv.length+rep.length+cr.length+comp.length)>0};
  });
 
  const totInv=rows.reduce((s,r)=>s+r.invPaid,0);
  const totRep=rows.reduce((s,r)=>s+r.repCash,0);
+ const totComp=rows.reduce((s,r)=>s+r.compCash,0);
  const totCr=rows.reduce((s,r)=>s+r.crAmt,0);
  const totGrand=rows.reduce((s,r)=>s+r.grand,0);
  const maxGrand=Math.max(...rows.map(r=>r.grand),1);
@@ -3880,15 +3886,18 @@ function renderDayByDay(from, toD, filtInv, filtRep, filtCr){
    const pct=maxGrand>0?(row.grand/maxGrand)*100:0;
    const invPct=maxGrand>0?(row.invPaid/maxGrand)*100:0;
    const repPct=maxGrand>0?(row.repCash/maxGrand)*100:0;
+   const compPct=maxGrand>0?(row.compCash/maxGrand)*100:0;
    const h=Math.max(pct*((chartH-12)/100),row.hasData?2:0);
    const invH=Math.max(invPct*((chartH-12)/100),0);
    const repH=Math.max(repPct*((chartH-12)/100),0);
+   const compH=Math.max(compPct*((chartH-12)/100),0);
    const dateLabel=days.length<=31?row.d.getDate():(row.d.getDate()+'/'+monthNames[row.d.getMonth()]);
    const isWeekend=row.d.getDay()===0||row.d.getDay()===6;
    barsHtml+=`<div style="display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;width:${barW}px;" title="${row.ds}: Rs.${row.grand.toLocaleString()}">
     <div style="font-size:9px;color:${row.grand>0?'#7c3aed':'#ccc'};font-weight:700;margin-bottom:2px;">${row.grand>0?'Rs.'+(row.grand>=1000?(row.grand/1000).toFixed(1)+'k':row.grand):''}</div>
     <div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:${chartH-32}px;">
-     <div style="width:100%;border-radius:4px 4px 0 0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;" title="Invoices: Rs.${row.invPaid.toLocaleString()} | Repairs: Rs.${row.repCash.toLocaleString()}">
+     <div style="width:100%;border-radius:4px 4px 0 0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;" title="Invoices: Rs.${row.invPaid.toLocaleString()} | Repairs: Rs.${row.repCash.toLocaleString()} | Computer: Rs.${row.compCash.toLocaleString()}">
+      <div style="width:100%;height:${compH}px;background:#a78bfa;"></div>
       <div style="width:100%;height:${repH}px;background:#34d399;"></div>
       <div style="width:100%;height:${invH}px;background:#60a5fa;"></div>
      </div>
@@ -3902,6 +3911,7 @@ function renderDayByDay(from, toD, filtInv, filtRep, filtCr){
   <div style="margin-left:64px;display:flex;gap:16px;margin-top:10px;font-size:11px;color:#666;">
    <span><span style="display:inline-block;width:10px;height:10px;background:#60a5fa;border-radius:2px;margin-right:4px;"></span>Invoice Sales</span>
    <span><span style="display:inline-block;width:10px;height:10px;background:#34d399;border-radius:2px;margin-right:4px;"></span>Repair Revenue</span>
+   <span><span style="display:inline-block;width:10px;height:10px;background:#a78bfa;border-radius:2px;margin-right:4px;"></span>Computer Jobs</span>
   </div>
   </div>
   </div>`;
@@ -3920,6 +3930,7 @@ function renderDayByDay(from, toD, filtInv, filtRep, filtCr){
     <td style="font-weight:${isToday?'700':'500'};color:${isToday?'#7c3aed':'#111'};font-size:13px;">${row.ds}</td>
     <td style="color:${isWeekend?'#7c3aed':'#888'};font-size:12px;font-weight:${isWeekend?'700':'400'};">${row.dayName}</td>
     <td style="color:#7c3aed;font-weight:600;">${row.invPaid>0?'Rs. '+row.invPaid.toLocaleString():'—'}</td>
+    <td style="color:#5b21b6;font-weight:600;">${row.compCash>0?'Rs. '+row.compCash.toLocaleString():'—'}</td>
     <td style="color:#065f46;font-weight:600;">${row.repCash>0?'Rs. '+row.repCash.toLocaleString():'—'}</td>
     <td style="color:#dc2626;">${row.crAmt>0?'Rs. '+row.crAmt.toLocaleString():'—'}</td>
     <td style="font-weight:800;color:${row.grand>0?'#7c3aed':'#ccc'};">${row.grand>0?'Rs. '+row.grand.toLocaleString():'—'}</td>
@@ -3930,6 +3941,7 @@ function renderDayByDay(from, toD, filtInv, filtRep, filtCr){
   if(tfoot)tfoot.innerHTML=`<tr style="background:#f5f3ff;">
    <td colspan="2" style="padding:10px;font-weight:700;color:#7c3aed;font-size:12px;">TOTAL (${rows.length} days)</td>
    <td style="padding:10px;font-weight:700;color:#7c3aed;">Rs. ${totInv.toLocaleString()}</td>
+   <td style="padding:10px;font-weight:700;color:#5b21b6;">Rs. ${totComp.toLocaleString()}</td>
    <td style="padding:10px;font-weight:700;color:#065f46;">Rs. ${totRep.toLocaleString()}</td>
    <td style="padding:10px;font-weight:700;color:#dc2626;">Rs. ${totCr.toLocaleString()}</td>
    <td style="padding:10px;font-weight:800;color:#7c3aed;font-size:14px;">Rs. ${totGrand.toLocaleString()}</td>
@@ -3956,7 +3968,7 @@ function renderDayByDay(from, toD, filtInv, filtRep, filtCr){
        </div>
        <div>
         <div style="font-size:13px;font-weight:700;color:#111;">${row.dayName}, ${row.ds}</div>
-        <div style="font-size:11px;color:#888;margin-top:2px;">${row.inv.length} invoice${row.inv.length!==1?'s':''} · ${row.rep.length} repair${row.rep.length!==1?'s':''} · ${row.cr.length} credit${row.cr.length!==1?'s':''}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px;">${row.inv.length} invoice${row.inv.length!==1?'s':''} · ${row.rep.length} repair${row.rep.length!==1?'s':''} · ${row.comp.length} computer · ${row.cr.length} credit${row.cr.length!==1?'s':''}</div>
        </div>
       </div>
       <div style="text-align:right;">
@@ -3966,6 +3978,7 @@ function renderDayByDay(from, toD, filtInv, filtRep, filtCr){
      </div>
      <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">
       ${row.invPaid>0?`<span style="background:#ede9fe;color:#5b21b6;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">💰 Rs.${row.invPaid.toLocaleString()} Sales</span>`:''}
+      ${row.compCash>0?`<span style="background:#f5f3ff;color:#7c3aed;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">💻 Rs.${row.compCash.toLocaleString()} Computer</span>`:''}
       ${row.repCash>0?`<span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">🔧 Rs.${row.repCash.toLocaleString()} Repairs</span>`:''}
       ${row.crAmt>0?`<span style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">💳 Rs.${row.crAmt.toLocaleString()} Credit</span>`:''}
      </div>
@@ -5524,19 +5537,35 @@ window.addEventListener('appinstalled', () => {
 const manifestData = {
  name: "HIRU MOBILE & COMPUTERS",
  short_name: "HIRU COMP",
- description: "Computer & Mobile Repair Management - Aralaganwila",
- start_url: "./",
+ description: "Computer & Mobile Repair Management System - Aralaganwila",
+ start_url: "/HIRU-COMPUTER/",
+ scope: "/HIRU-COMPUTER/",
  display: "standalone",
  background_color: "#1e1b4b",
  theme_color: "#7c3aed",
  orientation: "portrait-primary",
+ lang: "en",
  categories: ["business", "productivity"],
  icons: [
   {
-   src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%231e1b4b'/%3E%3Ctext y='400' font-size='380' x='56'%3E%F0%9F%92%BB%3C/text%3E%3C/svg%3E",
-   sizes: "512x512",
-   type: "image/svg+xml",
+   src: "icon-192.png",
+   sizes: "192x192",
+   type: "image/png",
    purpose: "any maskable"
+  },
+  {
+   src: "icon-512.png",
+   sizes: "512x512",
+   type: "image/png",
+   purpose: "any maskable"
+  }
+ ],
+ screenshots: [
+  {
+   src: "icon-512.png",
+   sizes: "512x512",
+   type: "image/png",
+   form_factor: "wide"
   }
  ]
 };
